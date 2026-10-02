@@ -8,6 +8,7 @@ const key = new TextEncoder().encode(secretKey)
 export interface AuthUser {
   id: number
   username: string
+  role: string
 }
 
 export async function authenticateUser(
@@ -23,12 +24,13 @@ export async function authenticateUser(
   const isValid = await bcrypt.compare(password, user.password)
   if (!isValid) return null
 
-  return { id: user.id, username: user.username }
+  return { id: user.id, username: user.username, role: user.role }
 }
 
 export async function createUser(
   username: string,
-  password: string
+  password: string,
+  role: string = 'USER'
 ): Promise<AuthUser> {
   const hashedPassword = await bcrypt.hash(password, 12)
 
@@ -36,21 +38,22 @@ export async function createUser(
     data: {
       username,
       password: hashedPassword,
+      role,
     },
   })
 
-  return { id: user.id, username: user.username }
+  return { id: user.id, username: user.username, role: user.role }
 }
 
 export async function generateToken(user: AuthUser): Promise<string> {
-  return await new SignJWT({ userId: user.id, username: user.username })
+  return await new SignJWT({ userId: user.id, username: user.username, role: user.role })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
     .sign(key)
 }
 
-export async function verifyToken(token: string): Promise<{ userId: number; username: string } | null> {
+export async function verifyToken(token: string): Promise<{ userId: number; username: string; role: string } | null> {
   try {
     const { payload } = await jwtVerify(token, key, {
       algorithms: ['HS256'],
@@ -58,6 +61,7 @@ export async function verifyToken(token: string): Promise<{ userId: number; user
     return {
       userId: payload.userId as number,
       username: payload.username as string,
+      role: payload.role as string,
     }
   } catch {
     return null

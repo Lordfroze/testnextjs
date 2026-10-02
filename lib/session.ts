@@ -8,6 +8,7 @@ const key = new TextEncoder().encode(secretKey)
 export interface SessionPayload {
   userId: string
   username: string
+  role: string
 }
 
 export async function createSession(payload: SessionPayload) {
@@ -41,6 +42,7 @@ export async function verifySession(): Promise<SessionPayload | null> {
     return {
       userId: payload.userId as string,
       username: payload.username as string,
+      role: payload.role as string,
     }
   } catch {
     return null

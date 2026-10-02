@@ -10,12 +10,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Check if user is admin
-  const user = await prisma.user.findUnique({
-    where: { id: parseInt(session.userId) }
-  })
-
-  if (!user || user.username !== 'admin') {
+  // Check if user is admin using role from session
+  if (session.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Forbidden: Admin only' }, { status: 403 })
   }
 
@@ -58,7 +54,7 @@ export async function POST(request: NextRequest) {
     const newUser = await createUser(username, password)
 
     return NextResponse.json(
-      { id: newUser.id, username: newUser.username },
+      { id: newUser.id, username: newUser.username, role: newUser.role },
       { status: 201 }
     )
   } catch (error) {
@@ -77,12 +73,8 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Check if user is admin
-  const user = await prisma.user.findUnique({
-    where: { id: parseInt(session.userId) }
-  })
-
-  if (!user || user.username !== 'admin') {
+  // Check if user is admin using role from session
+  if (session.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Forbidden: Admin only' }, { status: 403 })
   }
 
@@ -91,6 +83,7 @@ export async function GET() {
       select: {
         id: true,
         username: true,
+        role: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' }

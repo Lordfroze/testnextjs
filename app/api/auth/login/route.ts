@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await createSession({ userId: String(user.id), username: user.username })
+    await createSession({ userId: String(user.id), username: user.username, role: user.role })
 
-    return NextResponse.json({ userId: user.id, username: user.username })
+    return NextResponse.json({ userId: user.id, username: user.username, role: user.role })
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(
