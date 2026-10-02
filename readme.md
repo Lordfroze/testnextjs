@@ -11,6 +11,8 @@ Membuat aplikasi **TodoList** yang aman dengan fitur:
 - CRUD operations untuk todo
 - Soft delete (tidak menghapus data secara permanen)
 - Penampilan nama penulis di setiap todo
+- **Role-based access control (RBAC) - Admin & User roles**
+- **Manajemen user oleh Admin**
 - Antarmuka yang responsif untuk mobile dan desktop
 
 ---
@@ -29,8 +31,13 @@ Membuat aplikasi **TodoList** yang aman dengan fitur:
 │   │   ├── auth/
 │   │   │   ├── login/
 │   │   │   │   └── route.ts    # API login
-│   │   │   └── logout/
-│   │   │       └── route.ts    # API logout
+│   │   │   ├── logout/
+│   │   │   │   └── route.ts    # API logout
+│   │   │   └── me/
+│   │   │       └── route.ts    # API get current user info
+│   │   ├── admin/
+│   │   │   └── users/
+│   │   │       └── route.ts    # Admin user management
 │   │   └── todos/
 │   │       ├── route.ts        # GET /api/todos, POST /api/todos
 │   │       └── [id]/route.ts   # GET /api/todos/:id, PUT /api/todos/:id, DELETE /api/todos/:id
@@ -62,6 +69,13 @@ Membuat aplikasi **TodoList** yang aman dengan fitur:
 ```http
 POST /api/auth/login           # Login pengguna
 POST /api/auth/logout          # Logout pengguna
+GET  /api/auth/me              # Info user saat ini (termasuk role)
+```
+
+### Admin User Management (Admin Only)
+```http
+GET  /api/admin/users          # Daftar semua user
+POST /api/admin/users          # Buat user baru
 ```
 
 **Request Body (Login):**
@@ -75,7 +89,18 @@ POST /api/auth/logout          # Logout pengguna
 **Response (Login):**
 ```json
 {
-  "userId": 1
+  "userId": 1,
+  "username": "admin",
+  "role": "ADMIN"
+}
+```
+
+**Response (/api/auth/me):**
+```json
+{
+  "userId": "1",
+  "username": "admin",
+  "role": "ADMIN"
 }
 ```
 
@@ -118,10 +143,13 @@ DELETE /api/todos/:id          # Soft delete todo
 ### Prisma Schema (`prisma/schema.prisma`)
 ```prisma
 model User {
-  id       Int     @id @default(autoincrement())
-  username String   @unique
-  password String
-  todos    Todo[]
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  role      String   @default("USER")  // USER, ADMIN
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  todos     Todo[]
 }
 
 model Todo {
@@ -153,6 +181,41 @@ npx prisma migrate dev
 
 ---
 
+## 🔐 Role-Based Access Control (RBAC)
+
+Aplikasi ini mengimplementasikan sistem **Role-Based Access Control** dengan dua peran:
+
+### Peran (Roles)
+| Role | Deskripsi | Akses |
+|------|-----------|-------|
+| **ADMIN** | Administrator sistem | Full access ke semua fitur + manajemen user |
+| **USER** | Pengguna biasa | Akses ke todo CRUD sendiri |
+
+### Hak Akses per Endpoint
+| Endpoint | USER | ADMIN |
+|----------|------|-------|
+| `GET /api/todos` | ✅ | ✅ |
+| `POST /api/todos` | ✅ | ✅ |
+| `PUT /api/todos/:id` | ✅ (milik sendiri) | ✅ |
+| `DELETE /api/todos/:id` | ✅ (milik sendiri) | ✅ |
+| `GET /api/auth/me` | ✅ | ✅ |
+| `GET /api/admin/users` | ❌ 403 | ✅ |
+| `POST /api/admin/users` | ❌ 403 | ✅ |
+
+### Fitur Admin
+- **Settings Menu** hanya muncul untuk user dengan role `ADMIN`
+- **Tambah User** via modal di halaman todo
+- User baru otomatis mendapat role `USER`
+- Admin tidak bisa dihapus/diubah role-nya via UI
+
+### Implementasi Teknis
+- Role disimpan di database (`User.role`)
+- Role dimasukkan ke JWT token saat login
+- Middleware & API memverifikasi `session.role === 'ADMIN'`
+- Frontend kondisional merender UI berdasarkan `userRole`
+
+---
+
 ## ⚙️ Tech Stack dan Library
 
 ### Framework Utama
@@ -180,22 +243,26 @@ npx prisma migrate dev
 ```json
 {
   "dependencies": {
-    "next": "14.0.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "typescript": "5.0.0",
-    "@types/node": "20.0.0",
-    "@types/react": "18.2.0",
-    "@types/react-dom": "18.2.0",
-    "prisma": "5.0.0",
-    "jsonwebtoken": "9.0.0",
-    "bcryptjs": "2.4.3"
+    "next": "14.2.0",
+    "react": "18.3.0",
+    "react-dom": "18.3.0",
+    "typescript": "5.5.3",
+    "@types/node": "20.12.0",
+    "@types/react": "18.3.0",
+    "@types/react-dom": "18.3.0",
+    "@prisma/client": "5.10.0",
+    "jsonwebtoken": "9.0.2",
+    "bcryptjs": "2.4.3",
+    "jose": "5.2.0"
   },
   "devDependencies": {
-    "tailwindcss": "3.3.0",
-    "autoprefixer": "10.4.0",
-    "postcss": "8.4.0",
-    "@next/eslint-plugin-next": "14.0.0"
+    "tailwindcss": "3.4.0",
+    "autoprefixer": "10.4.17",
+    "postcss": "8.4.35",
+    "prisma": "5.10.0",
+    "tsx": "4.7.0",
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.2.0"
   }
 }
 ```
@@ -297,7 +364,7 @@ yarn start
 ### Test Manual
 1. **Halaman Login**
    - Akses `http://localhost:3000/login`
-   - Coba login dengan kredensial valid: `username: admin`, `password: admin123`
+   - Coba login dengan kredensial valid: `username: admin`, `password: admin123` (Role: ADMIN)
    - Test redirect setelah login sukses ke `/todo`
    - Test redirect guest ke `/login` ketika mengakses `/todo`
 
@@ -308,7 +375,13 @@ yarn start
    - Test hapus todo (soft delete)
    - Verifikasi todo yang dihapus tidak muncul di list
 
-3. **API Endpoints**
+3. **Fitur Admin (hanya untuk user ADMIN)**
+   - Login sebagai `admin` / `admin123`
+   - Icon Settings (⚙️) muncul di header sebelah tombol Logout
+   - Klik "Tambah User" untuk membuat user baru
+   - User baru otomatis mendapat role `USER`
+
+4. **API Endpoints**
    - Gunakan tools seperti Postman atau curl
    - Test semua endpoint yang disebutkan di atas
 
