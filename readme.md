@@ -27,6 +27,9 @@ Membuat aplikasi **TodoList** yang aman dengan fitur:
 │   │   └── page.tsx           # Halaman login
 │   ├── todo/
 │   │   └── page.tsx           # Halaman daftar todo (dilindungi auth)
+│   ├── admin/
+│   │   └── users/
+│   │       └── page.tsx       # Halaman manajemen user (Admin only)
 │   ├── api/
 │   │   ├── auth/
 │   │   │   ├── login/
@@ -37,7 +40,7 @@ Membuat aplikasi **TodoList** yang aman dengan fitur:
 │   │   │       └── route.ts    # API get current user info
 │   │   ├── admin/
 │   │   │   └── users/
-│   │   │       └── route.ts    # Admin user management
+│   │   │       └── route.ts    # Admin user management (CRUD)
 │   │   └── todos/
 │   │       ├── route.ts        # GET /api/todos, POST /api/todos
 │   │       └── [id]/route.ts   # GET /api/todos/:id, PUT /api/todos/:id, DELETE /api/todos/:id
@@ -74,8 +77,72 @@ GET  /api/auth/me              # Info user saat ini (termasuk role)
 
 ### Admin User Management (Admin Only)
 ```http
-GET  /api/admin/users          # Daftar semua user
-POST /api/admin/users          # Buat user baru
+GET    /api/admin/users          # Daftar semua user
+POST   /api/admin/users          # Buat user baru
+PUT    /api/admin/users          # Update user (username, role)
+DELETE /api/admin/users?id=:id   # Hapus user
+```
+
+**Request Body (Create User):**
+```json
+{
+  "username": "newuser",
+  "password": "password123"
+}
+```
+
+**Request Body (Update User):**
+```json
+{
+  "userId": 1,
+  "username": "updateduser",
+  "role": "ADMIN"
+}
+```
+
+**Response (GET /api/admin/users):**
+```json
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "role": "ADMIN",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "username": "user123",
+    "role": "USER",
+    "createdAt": "2024-01-02T00:00:00.000Z"
+  }
+]
+```
+
+**Response (POST /api/admin/users):**
+```json
+{
+  "id": 3,
+  "username": "newuser",
+  "role": "USER"
+}
+```
+
+**Response (PUT /api/admin/users):**
+```json
+{
+  "id": 1,
+  "username": "updateduser",
+  "role": "ADMIN",
+  "updatedAt": "2024-01-03T00:00:00.000Z"
+}
+```
+
+**Response (DELETE /api/admin/users?id=2):**
+```json
+{
+  "message": "User deleted successfully",
+  "id": 2
+}
 ```
 
 **Request Body (Login):**
@@ -204,15 +271,20 @@ Aplikasi ini mengimplementasikan sistem **Role-Based Access Control** dengan dua
 
 ### Fitur Admin
 - **Settings Menu** hanya muncul untuk user dengan role `ADMIN`
-- **Tambah User** via modal di halaman todo
-- User baru otomatis mendapat role `USER`
-- Admin tidak bisa dihapus/diubah role-nya via UI
+- **Halaman Manajemen User** (`/admin/users`) - Akses via tombol "Manajemen Pengguna" di header todo
+- **Tambah User** via modal di halaman todo maupun halaman admin users
+- **Edit User** inline di tabel manajemen user (username & role)
+- **Hapus User** dengan konfirmasi di halaman admin users
+- User baru otomatis mendapat role `USER` (bisa diubah saat pembuatan)
+- Admin tidak bisa dihapus/diubah role-nya via UI (proteksi self-demotion & self-deletion)
+- Role-based UI: Admin melihat badge "ADMIN" (purple), User melihat badge "USER" (blue)
 
 ### Implementasi Teknis
 - Role disimpan di database (`User.role`)
 - Role dimasukkan ke JWT token saat login
 - Middleware & API memverifikasi `session.role === 'ADMIN'`
 - Frontend kondisional merender UI berdasarkan `userRole`
+- Proteksi route: `/admin/users` hanya aksesible oleh ADMIN via middleware
 
 ---
 
@@ -376,12 +448,18 @@ yarn start
    - Verifikasi todo yang dihapus tidak muncul di list
 
 3. **Fitur Admin (hanya untuk user ADMIN)**
-   - Login sebagai `admin` / `admin123`
-   - Icon Settings (⚙️) muncul di header sebelah tombol Logout
-   - Klik "Tambah User" untuk membuat user baru
-   - User baru otomatis mendapat role `USER`
-
-4. **API Endpoints**
+    - Login sebagai `admin` / `admin123`
+    - Icon Settings (⚙️) muncul di header sebelah tombol Logout
+    - Klik "Tambah User" untuk membuat user baru
+    - User baru otomatis mendapat role `USER`
+    - Klik tombol "Manajemen Pengguna" (purple badge) di header untuk buka halaman admin users
+    - Di halaman `/admin/users`:
+      - Lihat daftar semua user dengan role, tanggal buat
+      - Klik "Tambah User" untuk modal tambah user dengan pilihan role
+      - Klik "Edit" untuk edit username/role inline
+      - Klik "Hapus" untuk hapus user (dengan konfirmasi)
+      - Klik "Kembali ke Todo" untuk kembali ke halaman todo
+4. **API Endpoints**4. **API Endpoints**
    - Gunakan tools seperti Postman atau curl
    - Test semua endpoint yang disebutkan di atas
 
@@ -418,17 +496,21 @@ curl -X GET http://localhost:3000/api/todos \
 ### Frontend Files
 - `app/login/page.tsx` - Form login
 - `app/todo/page.tsx` - Daftar todo
+- `app/admin/users/page.tsx` - Halaman manajemen user (Admin)
 - `app/api/auth/login/route.ts` - API login
 - `app/api/auth/logout/route.ts` - API logout
+- `app/api/auth/me/route.ts` - API get current user
 - `app/api/todos/route.ts` - API todo collection
 - `app/api/todos/[id]/route.ts` - API todo single resource
+- `app/api/admin/users/route.ts` - API admin user management (CRUD)
 
 ### Backend Files
 - `lib/session.ts` - Utility sesi JWT
+- `lib/auth.ts` - Utility autentikasi (register, login, token)
 - `lib/todos.ts` - Utility todo operations
 - `lib/prisma/db.ts` - Koneksi database
 - `lib/prisma/schema.prisma` - Schema database
-- `lib/middleware.ts` - Middleware proteksi route
+- `middleware.ts` - Middleware proteksi route
 
 ### Konfigurasi
 - `tailwind.config.js` - Konfigurasi Tailwind CSS
@@ -438,6 +520,7 @@ curl -X GET http://localhost:3000/api/todos \
 ---
 
 ## 🔒 Keamanan dan Pertimbangan Produksi
+
 
 ### Praktik Terbaik
 1. **Environment Variables**: Simpan secrets di environment variables
@@ -530,5 +613,5 @@ Untuk pertanyaan, kontribusi, atau perbaikan, silakan buka issue di repository i
 
 ---
 
-*Terakhir diperbarui: $(date '+%Y-%m-%d')*
+*Terakhir diperbarui: 2026-10-04*
 *Versi: 1.0.0*

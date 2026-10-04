@@ -6,14 +6,14 @@ const secretKey = process.env.JWT_SECRET
 const key = new TextEncoder().encode(secretKey)
 
 export interface SessionPayload {
-  userId: string
+  id: number
   username: string
   role: string
 }
 
 export async function createSession(payload: SessionPayload) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  const token = await new SignJWT({ ...payload })
+  const token = await new SignJWT({ userId: payload.id, username: payload.username, role: payload.role })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
@@ -40,7 +40,7 @@ export async function verifySession(): Promise<SessionPayload | null> {
       algorithms: ['HS256'],
     })
     return {
-      userId: payload.userId as string,
+      id: payload.userId as number,
       username: payload.username as string,
       role: payload.role as string,
     }

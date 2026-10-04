@@ -65,6 +65,10 @@ export default function TodoPage() {
     }
   }
 
+  const navigateToAdminUsers = () => {
+    router.push('/admin/users')
+  }
+
   const addTodo = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newTodo.trim()) return
@@ -261,6 +265,16 @@ export default function TodoPage() {
               />
             )}
 
+            {/* Admin Users navigation for admins */}
+            {userRole === 'ADMIN' && (
+              <button
+                onClick={navigateToAdminUsers}
+                className="px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-100 rounded-lg hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                Manajemen Pengguna
+              </button>
+            )}
+            
             {/* Logout button for non-admin users */}
             {userRole !== 'ADMIN' && (
               <button

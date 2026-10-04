@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await createSession({ userId: String(user.id), username: user.username, role: user.role })
+    await createSession({ id: user.id, username: user.username, role: user.role })
 
     return NextResponse.json({ userId: user.id, username: user.username, role: user.role })
   } catch (error) {

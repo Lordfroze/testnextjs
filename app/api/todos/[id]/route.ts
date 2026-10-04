@@ -20,7 +20,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
     }
 
-    const todo = await getTodoWithAuthor(todoId, parseInt(session.userId))
+    const todo = await getTodoWithAuthor(todoId, session.id)
 
     if (!todo) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 })
@@ -56,7 +56,7 @@ export async function PUT(
 
     const { title, completed } = await request.json()
 
-    const todo = await getTodoById(todoId, parseInt(session.userId))
+    const todo = await getTodoById(todoId, session.id)
 
     if (!todo) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 })
@@ -68,7 +68,7 @@ export async function PUT(
         ...(title !== undefined && { title: title.trim() }),
         ...(completed !== undefined && { completed }),
       },
-      parseInt(session.userId)
+      session.id
     )
 
     return NextResponse.json(updatedTodo)
@@ -99,13 +99,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
     }
 
-    const todo = await getTodoById(todoId, parseInt(session.userId))
+    const todo = await getTodoById(todoId, session.id)
 
     if (!todo) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 })
     }
 
-    await deleteTodo(todoId, parseInt(session.userId))
+    await deleteTodo(todoId, session.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
 
-const protectedRoutes = ['/todo']
+const protectedRoutes = ['/todo', '/admin/users']
 const publicRoutes = ['/login']
 
 export default async function middleware(req: NextRequest) {
@@ -24,6 +24,11 @@ export default async function middleware(req: NextRequest) {
 
   // Redirect to todo if accessing login page with valid session
   if (isPublicRoute && session) {
+    return NextResponse.redirect(new URL('/todo', req.nextUrl))
+  }
+
+  // Check if accessing admin route but not admin role
+  if (path.startsWith('/admin/') && session && session.role !== 'ADMIN') {
     return NextResponse.redirect(new URL('/todo', req.nextUrl))
   }
 

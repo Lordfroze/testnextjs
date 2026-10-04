@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const todos = await getTodosWithAuthor(parseInt(session.userId))
+    const todos = await getTodosWithAuthor(session.id)
     return NextResponse.json(todos)
   } catch (error) {
     console.error('Get todos error:', error)
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const todo = await createTodo(title.trim(), parseInt(session.userId))
+    const todo = await createTodo(title.trim(), session.id)
     return NextResponse.json(todo, { status: 201 })
   } catch (error) {
     console.error('Create todo error:', error)

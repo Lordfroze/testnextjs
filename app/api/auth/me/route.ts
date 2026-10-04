@@ -9,7 +9,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    userId: session.userId,
+    userId: session.id,
     username: session.username,
     role: session.role,
   })
