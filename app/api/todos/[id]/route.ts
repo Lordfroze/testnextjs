@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { getTodoById, getTodoWithAuthor, updateTodo, deleteTodo } from '@/lib/todos'
+import { getTodoById, getTodoWithAuthor, updateTodo, deleteTodo, getOrCreateTags } from '@/lib/todos'
 
 export async function GET(
   request: NextRequest,
@@ -54,7 +54,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
     }
 
-    const { title, completed } = await request.json()
+    const { title, completed, tagNames } = await request.json()
 
     const todo = await getTodoById(todoId, session.id)
 
@@ -62,11 +62,14 @@ export async function PUT(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 })
     }
 
+    const tagIds = tagNames?.length ? await getOrCreateTags(tagNames) : undefined
+
     const updatedTodo = await updateTodo(
       todoId,
       {
         ...(title !== undefined && { title: title.trim() }),
         ...(completed !== undefined && { completed }),
+        ...(tagNames !== undefined && { tagIds }),
       },
       session.id
     )

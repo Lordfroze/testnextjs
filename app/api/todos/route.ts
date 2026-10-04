@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { getTodosWithAuthor, createTodo } from '@/lib/todos'
+import { getTodosWithAuthor, createTodo, getOrCreateTags } from '@/lib/todos'
 
 export async function GET() {
   const session = await getSession()
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { title } = await request.json()
+    const { title, tagNames } = await request.json()
 
     if (!title || !title.trim()) {
       return NextResponse.json(
@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const todo = await createTodo(title.trim(), session.id)
+    const tagIds = tagNames?.length ? await getOrCreateTags(tagNames) : []
+
+    const todo = await createTodo(title.trim(), session.id, tagIds)
     return NextResponse.json(todo, { status: 201 })
   } catch (error) {
     console.error('Create todo error:', error)

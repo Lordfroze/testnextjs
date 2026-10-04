@@ -20,12 +20,37 @@ model User {
   todos     Todo[]
 }
 
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  color     String   @default("#3B82F6")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  todos     TodoTag[]
+
+  @@index([name])
+}
+
+model TodoTag {
+  id        Int      @id @default(autoincrement())
+  todoId    Int
+  tagId     Int
+  todo      Todo     @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([todoId, tagId])
+  @@index([todoId])
+  @@index([tagId])
+}
+
 model Todo {
   id        Int      @id @default(autoincrement())
   title     String
   completed Boolean  @default(false)
   author    User     @relation(fields: [authorId], references: [id])
   authorId  Int
+  tags      TodoTag[]
   deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
